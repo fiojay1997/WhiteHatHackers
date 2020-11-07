@@ -43,7 +43,7 @@ json    : map
 return  : map
 """
 def filter(json, required_keywords):
-    continue     
+    pass     
 
 """
 save json to local files
