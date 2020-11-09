@@ -31,10 +31,10 @@ def make_api_call(api, head_info):
 # json    : map
 # return  : map
 def filter(json, required_keywords):
-    for i in json:
+    for key, value in json.item():
         for j in required_keywords:
-            if i == j:
-                json.remove(i)   
+            if value == j:
+                json.remove(key)   
     return json
 
 # save json to local files
@@ -46,6 +46,25 @@ def save_file(data, dest):
     dest_file = "data" + "_" + date.today()
     with open(dest_file) as f:
         json.dump(data, f)
+
+# extract url info from given json
+# json    : map
+# return  : array
+def extract_url(json):
+    urls = []
+    regex = re.compile(r'^(?:http|ftp)s?://'
+                       r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
+                       r'localhost|' 
+                       r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
+                       r'(?::\d+)?' 
+                       r'(?:/?|[/?]\S+)$',
+                        re.IGNORECASE)
+    for key, value in json.items():
+        if key == "url" or re.match(regex, value):
+            urls.append(value)
+            json.remove(key)
+    return urls
+
 
 # download pictures from the give url to the destination 
 # address  : string
@@ -67,9 +86,18 @@ def proceed(api, header, dest):
     header = make_header(header)
     ret_info = make_api_call()
     filtered_info = filter()
-    if (filtered_info is not ""):
-        return filtered_info
+    
+    urls = extract_url(filtered_info)
+    if len(urls) is not 0:
+        for url in urls:
+            download_pic(url, dest)
+    
+    if filtered_info is not "":
+        save_file(filtered_info)
+        return "Success"
     return "Error"
 
 if __name__ == "__main__":
+    # TODO: set up parameters for input
+    # TODO: set up the filter
     proceed()
