@@ -2,16 +2,16 @@ import requests as rq
 import json
 from datetime import date
 
-# make up the request header
+# make up the request header, the strings should be trimmed and lowered
 # including keyword, type id, category id
 # keyword : string 
 # type_id : int 
 # cate_id : int
 # return  : map 
 def make_header(keyword, type_id, cate_id):
-    keyword = keyword
-    search_type = type_id
-    category = cate_id
+    keyword = keyword.strip().lower()
+    search_type = type_id.strip().lower()
+    category = cate_id.strip().lower()
     return {"keyword" : keyword, "typeIds" : search_type, "categoryIds" : category}
 
 # make api call
@@ -21,7 +21,8 @@ def make_header(keyword, type_id, cate_id):
 # return    : map
 def make_api_call(api, head_info):
     response = rq.get(api, params = head_info)
-    print(response)
+    if not response.ok:
+        return {"Error" : response.content()}
     return response.json()
 
 # filter information 
