@@ -59,7 +59,7 @@ def extract_url(json):
                        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
                        r'(?::\d+)?' 
                        r'(?:/?|[/?]\S+)$',
-                        re.IGNORECASE)
+                       re.IGNORECASE)
     for key, value in json.items():
         if key == "url" or re.match(regex, value):
             urls.append(value)
