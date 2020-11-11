@@ -1,0 +1,221 @@
+import requests as rq
+import json
+import time
+import os
+import re
+
+
+# make header for the request
+# user should provide browser information and accpeting content type
+# arguments and corresponding inputs should be provided
+#
+# browser_info      : string (firefox/chrome/etc)
+# content_type      : string (application/json/text/html/etc)
+# arguments         : string (character_set/http header infos)
+# inputs            : string (corresponding info for arguments)
+def make_header(browser_info, content_type, arguments, inputs):
+    header = {}
+    if browser_info is not None:
+        header['User-Agent'] = browser_info.strip().lower()
+    else:
+        header['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 Firefox/23.0'
+    header['Accept'] = 'application/json' if content_type is None else content_type
+    if len(arguments) == len(inputs) and arguments is not None:
+        for a, i in zip(arguments, inputs):
+            header[a] = i
+        return header
+    else:
+        return {"Error": "Wrong format"}
+
+
+# make parameters for the request
+# parameters should be compatible with the given api
+# for GET POST requests, parameters are not yet supported
+#
+# data_mapping      : dictionary (dictionary contains key value stores for parameters) 
+def make_params(data_mapping):
+    params = {}
+    for i, j in data_mapping.items():
+        params[i] = j.strip().lower()
+    return params
+
+
+# make requests, if there are any input, make request with header
+# if there are any parameter provied, the parameters should be included
+# TODO: backlogging for this method
+# 
+# url               : string (given api)
+# params            : dictionary (given parameters, could be none)
+def request(url, params=None):
+    if params is None:
+        try:
+            rep = rq.get(url)
+        except:
+            return {"Error": "Request failed without parameters"}
+    else:
+        try:
+            rep = rq.get(url, params)
+        except:
+            return {"Error": "Request failed with parameters"}
+    if rep.status_code == 200:
+        return rep.json()
+    else:
+        error = {"Error": "Request failed"}
+        return error
+
+
+# filter all the information that are not needed
+# TODO: this should not be used yet, incompleted
+# TODO: backlogging for this method
+#
+# data              : dictionary (store all the information pairs)
+# filter_words      : array of string (all the keywords that should be filtered out)
+def filter_info(data, filter_words):
+    new_dic = dict(data)
+    for key, value in data.iteritems():
+        for f in filter_words:
+            if key == f:
+                del new_dic[key]
+    return new_dic
+
+
+# write data to local json file
+# if no destination file name given, just assume it's data.json
+# TODO: this function shoudl be be generic, not only support json
+# TODO: set up buffer for saving
+#
+# data              : dictionary (contains all the data that's wating for saving)
+# dest_file_name    : string (location for saving json, default as "data")
+def save_json(data, dest_file_name="data"):
+    time_str = time.strftime("%Y%m%d-%H%M%S")
+    dest = dest_file_name + "_" + time_str + ".json"
+    if not os.path.exists(dest):
+        try:
+            with open(dest, "w", encoding="utf-8") as d:
+                json.dump(data, d, ensure_ascii=False, indent=4)
+            return {"Success": "Save succeed"}
+        except FileNotFoundError:
+            return {"Error": "File not found"}
+
+
+# extract url from given json
+# TODO: check if there is any unsolvable urls
+# TODO: check for resource types, save according to source types
+# TODO: set up backlogging for this function
+#
+# data              : dictionary (this should be a json string passed in)
+def extract_url(data):
+    urls = []
+    url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s(" \
+                r")<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’])) "
+    regex = re.compile(url_regex, re.IGNORECASE)
+    for key, value in data.items():
+        if isinstance(value, str):
+            if regex.match(value) or key == "url":
+                urls.append(value)
+    return urls
+
+
+# download resources from the given address to the destination
+# TODO: set up backlogging for this function 
+# TODO: check for resource types, check if it could downloaded
+#
+# address           : string (url for the resource)
+# dest_file_name    : string (destination for saving all the resources)
+def download_resources(address, dest_file_name=None):
+    if dest_file_name is None:
+        dest_file_name = "resource"
+    suffix = ""
+    # check the type of the resource
+    # address_split = address.split('.')
+    # if len(address_split) >= 2:
+    #     suffix = address_split[-1]
+
+    # set up the file name
+    time_str = time.strftime("%Y%m%d-%H%M%S")
+    dest = dest_file_name + "_" + time_str + "." + "jpeg"
+
+    # download
+    with open(dest, "wb") as f:
+        response = rq.get(address, stream=True)
+        if not response.ok:
+            return {"Error": "Request resources failed"}
+        else:
+            for block in response.iter_content(1024):
+                if not block:
+                    break
+                f.write(block)
+    return {"Success": "Download succeeded"}
+
+
+# read json config from the directory:
+# if there is any requirements, they have to be in the config file
+# TODO: set up back tracking for the file
+# TODO: decompose the structure dict(dict(...))
+#
+# dest              : string (the destination file for reading config file)
+# required          : array of string (array contains all the filter words)
+def read_config(dest, required=None):
+    if required is None:
+        required = []
+    f = open(dest)
+    data = json.load(f)
+    file_config = {}
+    for r in required:
+        if r not in data:
+            return {"Error": "Wrong format of the configuration file"}
+        file_config[r] = data[r]
+    for d in data:
+        if d not in required:
+            file_config[d] = data[d]
+    return file_config
+
+
+# assembly all the functions
+# build the header -> build the parameters -> make the request -> check for
+# resources -> if there are any, download them, save them locally -> save all
+# the data
+# TODO: set up backlogging for this method
+# TODO: this should be more generic 
+# TODO: this should really be maintained by a class
+# TODO: a proxy should be added in order to prevent site ban
+# 
+# keywords          : array of string (keywords the user wants from the api)
+# file_dest         : string (location to save to files)
+# resources_dest    : string (location to store the resources)
+# browser_info      : string (the browser used for simulating the action)
+# config_dest       : string (location stores the config file)
+def proceed(keywords=None, file_dest="data",
+            resources_dest="resource", browser_info=None, config_dest="config.json"):
+    if keywords is None:
+        keywords = []
+    config = read_config(config_dest)
+    params = make_params(config)
+    assert params["api"] is not None
+    api = params["api"]
+    del params["api"]
+    urls = extract_url(params)
+    if len(urls) != 0:
+        download_resources(urls)
+    response = request(api, params)
+    # TODO: for backlog
+    # TODO: use response for logging
+    # TODO: check if response throws error
+    # TODO: check if the result is legal
+    download_result = download_resources(response)
+    # TODO: this part should be changed for logging
+    if "Success" in download_result:
+        print("Download succeeded")
+    else:
+        print("Download failed")
+    # TODO: set up backlogging for data downloading
+    # TODO: downloading should not only support json
+    save_result = save_json(response)
+    if "Success" in save_result:
+        print("Save succeeded")
+    else:
+        print("Save failed")
+
+
+if __name__ == '__main__':
+    proceed()
