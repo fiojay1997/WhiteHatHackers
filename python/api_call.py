@@ -31,7 +31,7 @@ def request(url, header):
     if response.status_code == 200:
         return response.json()
     else:
-        error_json = json.dumps({"Error": "500"})
+        error_json = {"Error": "500"}
         return error_json
 
 
