@@ -3,6 +3,7 @@ import json
 import time
 import os
 import re
+from pathlib import Path
 
 
 # make header for the request
@@ -32,7 +33,7 @@ def make_header(browser_info, content_type, arguments, inputs):
 # parameters should be compatible with the given api
 # for GET POST requests, parameters are not yet supported
 #
-# data_mapping      : dictionary (dictionary contains key value stores for parameters) 
+# data_mapping      : dictionary (dictionary contains key value stores for parameters)
 def make_params(data_mapping):
     params = {}
     for i, j in data_mapping.items():
@@ -43,7 +44,7 @@ def make_params(data_mapping):
 # make requests, if there are any input, make request with header
 # if there are any parameter provied, the parameters should be included
 # TODO: backlogging for this method
-# 
+#
 # url               : string (given api)
 # params            : dictionary (given parameters, could be none)
 def request(url, params=None):
@@ -87,8 +88,11 @@ def filter_info(data, filter_words):
 # data              : dictionary (contains all the data that's wating for saving)
 # dest_file_name    : string (location for saving json, default as "data")
 def save_json(data, dest_file_name="data"):
+    path = "data"
     time_str = time.strftime("%Y%m%d-%H%M%S")
-    dest = dest_file_name + "_" + time_str + ".json"
+    dest = path + "/" + dest_file_name + "_" + time_str + ".json"
+    Path(path).mkdir(parents=True, exist_ok=True)
+
     if not os.path.exists(dest):
         try:
             with open(dest, "w", encoding="utf-8") as d:
@@ -111,13 +115,13 @@ def extract_url(data):
     regex = re.compile(url_regex, re.IGNORECASE)
     for key, value in data.items():
         if isinstance(value, str):
-            if regex.match(value) or key == "url":
+            if  key == "url" or regex.match(value):
                 urls.append(value)
     return urls
 
 
 # download resources from the given address to the destination
-# TODO: set up backlogging for this function 
+# TODO: set up backlogging for this function
 # TODO: check for resource types, check if it could downloaded
 #
 # address           : string (url for the resource)
@@ -132,8 +136,11 @@ def download_resources(address, dest_file_name=None):
     #     suffix = address_split[-1]
 
     # set up the file name
+    path = "resources"
     time_str = time.strftime("%Y%m%d-%H%M%S")
-    dest = dest_file_name + "_" + time_str + "." + "jpeg"
+    dest = path + "/" + dest_file_name + "_" + time_str + "." + "jpeg"
+
+    Path(path).mkdir(parents=True, exist_ok=True)
 
     # download
     with open(dest, "wb") as f:
@@ -176,10 +183,10 @@ def read_config(dest, required=None):
 # resources -> if there are any, download them, save them locally -> save all
 # the data
 # TODO: set up backlogging for this method
-# TODO: this should be more generic 
+# TODO: this should be more generic
 # TODO: this should really be maintained by a class
 # TODO: a proxy should be added in order to prevent site ban
-# 
+#
 # keywords          : array of string (keywords the user wants from the api)
 # file_dest         : string (location to save to files)
 # resources_dest    : string (location to store the resources)
@@ -195,21 +202,23 @@ def proceed(keywords=None, file_dest="data",
     api = params["api"]
     del params["api"]
     urls = extract_url(params)
+    download_result = None
     if len(urls) != 0:
-        download_resources(urls)
-    response = request(api, params)
+        for url in urls:
+            download_result = download_resources(url)
     # TODO: for backlog
     # TODO: use response for logging
     # TODO: check if response throws error
     # TODO: check if the result is legal
-    download_result = download_resources(response)
     # TODO: this part should be changed for logging
-    if "Success" in download_result:
-        print("Download succeeded")
-    else:
-        print("Download failed")
+    if download_result is not None:
+        if "Success" in download_result:
+            print("Download succeeded")
+        else:
+            print("Download failed")
     # TODO: set up backlogging for data downloading
     # TODO: downloading should not only support json
+    response = request(api, params)
     save_result = save_json(response)
     if "Success" in save_result:
         print("Save succeeded")

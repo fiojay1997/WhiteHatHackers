@@ -1,0 +1,7 @@
+{
+  "api": "https://api.sunrise-sunset.org/json",
+  "lat": "36.7201600",
+  "lng": "-4.4203400",
+  "date": "today",
+  "url": "https://images.unsplash.com/photo-1533393492471-bd487fd86eac?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=3034&q=80"
+}
