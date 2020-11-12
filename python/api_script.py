@@ -37,7 +37,7 @@ def make_header(browser_info, content_type, arguments, inputs):
 def make_params(data_mapping):
     params = {}
     for i, j in data_mapping.items():
-        params[i] = j.strip().lower()
+        params[i] = j
     return params
 
 
@@ -80,6 +80,15 @@ def filter_info(data, filter_words):
     return new_dic
 
 
+# select data user need
+def select_data(data, selected):
+    new_r = {}
+    for key, value in data.items():
+        if key not in selected:
+            new_r[key] = value
+    return new_r
+
+
 # write data to local json file
 # if no destination file name given, just assume it's data.json
 # TODO: this function shoudl be be generic, not only support json
@@ -115,7 +124,7 @@ def extract_url(data):
     regex = re.compile(url_regex, re.IGNORECASE)
     for key, value in data.items():
         if isinstance(value, str):
-            if  key == "url" or regex.match(value):
+            if key == "url" or regex.match(value):
                 urls.append(value)
     return urls
 
@@ -201,6 +210,7 @@ def proceed(keywords=None, file_dest="data",
     assert params["api"] is not None
     api = params["api"]
     del params["api"]
+
     urls = extract_url(params)
     download_result = None
     if len(urls) != 0:
@@ -219,7 +229,23 @@ def proceed(keywords=None, file_dest="data",
     # TODO: set up backlogging for data downloading
     # TODO: downloading should not only support json
     response = request(api, params)
-    save_result = save_json(response)
+
+    if "selected" in config:
+        selected = [config["selected"]]
+        return_info = {}
+        # get what we want here
+        for key in response.keys():
+            if key in selected[0]:
+                if len(selected[0]) > 1:
+                    for k in selected[0]:
+                        return_info[k] = response[k]
+                else:
+                    return_info[key] = response[key]
+        save_result = save_json(return_info)
+
+    else:
+        save_result = save_json(response)
+
     if "Success" in save_result:
         print("Save succeeded")
     else:

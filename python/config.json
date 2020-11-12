@@ -1,7 +1,8 @@
 {
-  "api": "https://api.sunrise-sunset.org/json",
-  "lat": "36.7201600",
+  "api": "http://api.openweathermap.org/data/2.5/weather",
+  "q": "Salt Lake City",
   "lng": "-4.4203400",
-  "date": "today",
+  "appid": "d20917173f2a2edecc4eb60d8116cead",
+  "selected": ["wind", "clouds", "main"],
   "url": "https://images.unsplash.com/photo-1533393492471-bd487fd86eac?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=3034&q=80"
 }
