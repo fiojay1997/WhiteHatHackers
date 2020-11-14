@@ -14,6 +14,7 @@ from pathlib import Path
 # content_type      : string (application/json/text/html/etc)
 # arguments         : string (character_set/http header infos)
 # inputs            : string (corresponding info for arguments)
+# TODO: add more info here
 def make_header(browser_info, content_type, arguments, inputs):
     header = {}
     if browser_info is not None:
