@@ -13,6 +13,8 @@
 #include <libavutil/opt.h>
 #include "libavfilter/buffersrc.h"
 #include "libavfilter/buffersink.h"
+
+
 AVFormatContext * context = NULL;
 AVFormatContext* outputContext;
 int64_t  lastPts = 0;
