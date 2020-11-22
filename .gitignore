@@ -4,7 +4,8 @@
 #editor
 .DS_Store
 /.DS_Store
-
+.idea
+/.idea
 
 # Compiled Object files
 *.slo
