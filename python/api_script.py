@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 # make header for the request
-# user should provide browser information and accpeting content type
+# user should provide browser information and accepting content type
 # arguments and corresponding inputs should be provided
 #
 # browser_info      : string (firefox/chrome/etc)
@@ -92,7 +92,7 @@ def select_data(data, selected):
 
 # write data to local json file
 # if no destination file name given, just assume it's data.json
-# TODO: this function shoudl be be generic, not only support json
+# TODO: this function should be be generic, not only support json
 # TODO: set up buffer for saving
 #
 # data              : dictionary (contains all the data that's wating for saving)
