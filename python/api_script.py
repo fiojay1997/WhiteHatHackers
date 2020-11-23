@@ -4,6 +4,7 @@ import time
 import os
 import re
 from pathlib import Path
+import python.api_db as db
 
 
 # make header for the request
@@ -203,7 +204,7 @@ def read_config(dest, required=None):
 # browser_info      : string (the browser used for simulating the action)
 # config_dest       : string (location stores the config file)
 def proceed(keywords=None, file_dest="data",
-            resources_dest="resource", browser_info=None, config_dest="config.json"):
+            resources_dest="resource", browser_info=None, config_dest="sunrise_config.json"):
     if keywords is None:
         keywords = []
     config = read_config(config_dest)
@@ -231,6 +232,7 @@ def proceed(keywords=None, file_dest="data",
     # TODO: downloading should not only support json
     response = request(api, params)
 
+    # TODO: this needs to be fixed
     if "selected" in config:
         selected = [config["selected"]]
         return_info = {}
@@ -242,15 +244,19 @@ def proceed(keywords=None, file_dest="data",
                         return_info[k] = response[k]
                 else:
                     return_info[key] = response[key]
-        save_result = save_json(return_info)
 
+        # add db operations
+        nested_info = {}
+        for key in return_info.keys():
+            if type(return_info[key]) == dict:
+                for k, v in return_info[key].items():
+                    nested_info[k] = v
+            else:
+                nested_info[key] = return_info[key]
+        print(nested_info)
+        db.insert_data(nested_info)
     else:
-        save_result = save_json(response)
-
-    if "Success" in save_result:
-        print("Save succeeded")
-    else:
-        print("Save failed")
+        save_json(response)
 
 
 if __name__ == '__main__':

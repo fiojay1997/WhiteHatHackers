@@ -1,0 +1,7 @@
+{
+  "api": "http://api.openweathermap.org/data/2.5/weather",
+  "q": "Salt Lake City",
+  "lng": "-4.4203400",
+  "appid": "d20917173f2a2edecc4eb60d8116cead",
+  "selected": ["main", "name"]
+}
