@@ -7,7 +7,7 @@ from pathlib import Path
 import datetime
 import pymysql
 import pandas as pd
-
+import matplotlib.pyplot as plt
 
 def read_db_config(dest="db_config.json"):
     f = open(dest)
@@ -317,12 +317,17 @@ def proceed(keywords=None, file_dest="data",
                     nested_info[k] = v
             else:
                 nested_info[key] = return_info[key]
-        print(nested_info)
         insert_data(nested_info)
-        save_text_file(nested_info)
+        save_text_file(nested_info) 
+        convert_text_to_csv()
+        
+        if (config_dest == "sunrise_config.json"):
+            generate_img("sunrise", "sunset", "day_length")
+        if (config_dest == "weather_config.json"):
+            generate_img("", "", "")
     else:
         save_json(response)
-
+   
 
 def save_text_file(data_map):
     header_str = ""
@@ -331,18 +336,37 @@ def save_text_file(data_map):
         header_str += key
         header_str += ","
         info += str(value) + ","
-
     info = info[:-1]
     header_str = header_str[:-1]
     with open("data.txt", "w") as f:
-        f.write(header_str + '\n')
+        f.write(header_str + "\n")
         f.write(info)
+    
 
-def convert_txt_to_csv():
+def convert_text_to_csv():
+    data = pd.read_csv("data.txt")
+    data.to_csv("data.csv", index = None)
 
+
+def generate_img(data1, data2, data3):
+    df = pd.read_csv("data.csv")
+    name = ["Salt Lake City"]
+    x = np.arange(len(names))
+
+    w = 0.3
+    plt.bar(x - w, df[data1].values, width = w, label = data1)
+    plt.bar(x, df[data2].values, width = w, label = data2)
+    plt.bar(x + w, df[data3].values, width = w, label = data3)
+
+    plt.xticks(x, names)
+    plt.ylim([0, 3])
+    plt.tight_layout()
+    date = datetime.today().strftime('%Y-%m-%d')
+    plt.xlabel(date)
+
+    plt.legend(loc = 'upper center', bbox_to_anchor = (0.5, -0.2), fancybox = True, ncol = 5)
+    plt.savefig("data.jpeg", bbox_inches = "tight")
 
 
 if __name__ == '__main__':
-    proceed()
-
-
+     proceed()
