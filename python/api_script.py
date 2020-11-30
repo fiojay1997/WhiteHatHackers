@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 import datetime
 import pymysql
+import pandas as pd
 
 
 def read_db_config(dest="db_config.json"):
@@ -318,9 +319,30 @@ def proceed(keywords=None, file_dest="data",
                 nested_info[key] = return_info[key]
         print(nested_info)
         insert_data(nested_info)
+        save_text_file(nested_info)
     else:
         save_json(response)
 
 
+def save_text_file(data_map):
+    header_str = ""
+    info = ""
+    for key, value in data_map.items():
+        header_str += key
+        header_str += ","
+        info += str(value) + ","
+
+    info = info[:-1]
+    header_str = header_str[:-1]
+    with open("data.txt", "w") as f:
+        f.write(header_str + '\n')
+        f.write(info)
+
+def convert_txt_to_csv():
+
+
+
 if __name__ == '__main__':
     proceed()
+
+
