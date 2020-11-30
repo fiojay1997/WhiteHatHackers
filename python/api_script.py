@@ -7,68 +7,14 @@ from pathlib import Path
 import datetime
 import pymysql
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-
-def read_db_config(dest="db_config.json"):
-    f = open(dest)
-    return json.load(f)
-
-
-def db_con(config):
-    if 'host' not in config \
-            or 'user' not in config \
-            or 'password' not in config\
-            or 'db' not in config:
-        raise ValueError
-
-    host = config['host']
-    user = config['user']
-    password = config['password']
-    db = config['db']
-    port = None
-    if 'port' in config:
-        port = config['port']
-
-    if port is not None:
-        try:
-            connection = pymysql.connect(host=host, user=user, password=password, db=db, port=port)
-            return connection
-        except AssertionError:
-            return
-    else:
-        try:
-            connection = pymysql.connect(host=host, user=user, password=password, db=db, port=3306)
-            return connection
-        except AssertionError:
-            return
-
-
-def insert_data(data_map):
-    config = read_db_config()
-    table = config["table"]
-    connection = db_con(config)
-
-    try:
-        with connection.cursor() as cursor:
-            if 'date' not in data_map:
-                data_map['date'] = datetime.datetime.now()
-            keys = list(data_map.keys())
-            values = list(data_map.values())
-            key_str = ''
-            value_str = ''
-            for k in range(len(keys) - 1):
-                key_str += str(keys[k]) + ", "
-            key_str += str(keys[-1])
-            for v in range(len(values) - 1):
-                value_str += "'" + str(values[v]) + "'" + ", "
-            value_str += "'" + str(values[-1]) + "'"
-
-            sql = "INSERT INTO " + table + " (" + key_str + ")" + " VALUES " + "(" + value_str + ")"
-            print(sql)
-            cursor.execute(sql)
-        connection.commit()
-    finally:
-        connection.close()
+import boto
+import urllib
+from PIL import Image
+import sys
+from boto.s3.key import Key
+import io
 
 
 # make header for the request
@@ -323,10 +269,75 @@ def proceed(keywords=None, file_dest="data",
         
         if (config_dest == "sunrise_config.json"):
             generate_img("sunrise", "sunset", "day_length")
+            store_img_to_s3("sunrise")
         if (config_dest == "weather_config.json"):
             generate_img("", "", "")
+            store_img_to_s3("weather")
+        # there would be more 
     else:
         save_json(response)
+
+
+def read_db_config(dest="db_config.json"):
+    f = open(dest)
+    return json.load(f)
+
+
+def db_con(config):
+    if 'host' not in config \
+            or 'user' not in config \
+            or 'password' not in config\
+            or 'db' not in config:
+        raise ValueError
+
+    host = config['host']
+    user = config['user']
+    password = config['password']
+    db = config['db']
+    port = None
+    if 'port' in config:
+        port = config['port']
+
+    if port is not None:
+        try:
+            connection = pymysql.connect(host=host, user=user, password=password, db=db, port=port)
+            return connection
+        except AssertionError:
+            return
+    else:
+        try:
+            connection = pymysql.connect(host=host, user=user, password=password, db=db, port=3306)
+            return connection
+        except AssertionError:
+            return
+
+
+def insert_data(data_map):
+    config = read_db_config()
+    table = config["table"]
+    connection = db_con(config)
+
+    try:
+        with connection.cursor() as cursor:
+            if 'date' not in data_map:
+                data_map['date'] = datetime.datetime.now()
+            keys = list(data_map.keys())
+            values = list(data_map.values())
+            key_str = ''
+            value_str = ''
+            for k in range(len(keys) - 1):
+                key_str += str(keys[k]) + ", "
+            key_str += str(keys[-1])
+            for v in range(len(values) - 1):
+                value_str += "'" + str(values[v]) + "'" + ", "
+            value_str += "'" + str(values[-1]) + "'"
+
+            sql = "INSERT INTO " + table + " (" + key_str + ")" + " VALUES " + "(" + value_str + ")"
+            print(sql)
+            cursor.execute(sql)
+        connection.commit()
+    finally:
+        connection.close()
    
 
 def save_text_file(data_map):
@@ -350,7 +361,7 @@ def convert_text_to_csv():
 
 def generate_img(data1, data2, data3):
     df = pd.read_csv("data.csv")
-    name = ["Salt Lake City"]
+    names = ["Salt Lake City"]
     x = np.arange(len(names))
 
     w = 0.3
@@ -361,11 +372,30 @@ def generate_img(data1, data2, data3):
     plt.xticks(x, names)
     plt.ylim([0, 3])
     plt.tight_layout()
-    date = datetime.today().strftime('%Y-%m-%d')
+    date = datetime.datetime.now()
     plt.xlabel(date)
 
     plt.legend(loc = 'upper center', bbox_to_anchor = (0.5, -0.2), fancybox = True, ncol = 5)
     plt.savefig("data.jpeg", bbox_inches = "tight")
+
+
+def percent_cb(compelete, total):
+    sys.stdout.write('.')
+    sys.stdout.flush()
+
+
+# resize image and store to S3
+def store_img_to_s3(container_name):
+    #hide this somehow 
+    AWS_ACCESS_KEY_ID = 'AKIAIPFTPCKR6BP3FDNA'
+    AWS_SECRETE_KEY = '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' 
+    
+    bucket_name = AWS_ACCESS_KEY_ID.lower() + container_name  
+    s3_conn = boto.connect_s3(AWS_ACCESS_KEY_ID, AWS_SECRETE_KEY)
+    bucket = s3_conn.create_bucket(bucket_name, location=boto.s3.connection.Location.DEFAULT)
+    k = Key(bucket)
+    k.key = "Testing"
+    k.set_contents_from_filename("data.jpeg", cb=percent_cb, num_cb=10)
 
 
 if __name__ == '__main__':
