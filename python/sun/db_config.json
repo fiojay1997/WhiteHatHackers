@@ -1,0 +1,8 @@
+{
+  "host" : "white-hat-hackers.cbkoexjpndtw.us-east-1.rds.amazonaws.com",
+  "user" : "jayjay1997",
+  "password" : "12345678",
+  "db" : "api_data",
+  "port" : 3306,
+  "table" : "sun"
+}
