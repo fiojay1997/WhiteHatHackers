@@ -13,7 +13,7 @@ import boto
 import urllib
 from PIL import Image
 import sys
-from boto.s3.key import Key
+import boto3
 import io
 
 
@@ -278,7 +278,7 @@ def save_text_file(data_map):
         info += str(value) + ","
     info = info[:-1]
     header_str = header_str[:-1]
-    with open("data.txt", "w") as f:
+    with open("/tmp/data.txt", "w") as f:
         f.write(header_str + "\n")
         f.write(info)
     
@@ -286,13 +286,13 @@ def save_text_file(data_map):
 # convert a txt file to csv file
 # this is for pandas to read
 def convert_text_to_csv():
-    data = pd.read_csv("data.txt")
-    data.to_csv("data.csv", index = None)
+    data = pd.read_csv("/tmp/data.txt")
+    data.to_csv("/tmp/data.csv", index = None)
 
 
 # generate image from the given api and its data fields
 def generate_img(data1, data2, data3):
-    df = pd.read_csv("data.csv")
+    df = pd.read_csv("/tmp/data.csv")
     names = ["Salt Lake City"]
     x = np.arange(len(names))
 
@@ -304,17 +304,11 @@ def generate_img(data1, data2, data3):
     plt.xticks(x, names)
     plt.ylim([0, 3])
     plt.tight_layout()
-    date = datetime.datetime.now()
+    date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     plt.xlabel(date)
 
     plt.legend(loc = 'upper center', bbox_to_anchor = (0.5, -0.2), fancybox = True, ncol = 5)
-    plt.savefig("data.png", bbox_inches = "tight")
-
-
-# call back function for uploading to s3
-def percent_cb(compelete, total):
-    sys.stdout.write('.')
-    sys.stdout.flush()
+    plt.savefig("/tmp/data.png", bbox_inches = "tight")
 
 
 # resize image and store to S3
@@ -322,17 +316,11 @@ def percent_cb(compelete, total):
 # the access key and secrete key only works on my computer, so change it
 # container_name    : string (which api are we calling)
 def store_img_to_s3(container_name):
-    #hide this somehow 
-    AWS_ACCESS_KEY_ID = 'AKIAJZJIQW4K3FHBTKOQ'
-    AWS_SECRETE_KEY = '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' 
-    
-    bucket_name = AWS_ACCESS_KEY_ID.lower() + container_name  
-    s3_conn = boto.connect_s3(AWS_ACCESS_KEY_ID, AWS_SECRETE_KEY)
-    bucket = s3_conn.create_bucket(bucket_name)
-    k = Key(bucket)
-    now = str(datetime.datetime.now())
-    k.key = container_name + "_" + now
-    k.set_contents_from_filename("data.png", cb=percent_cb, num_cb=10)
+    client = boto3.client('s3', region_name='us-east-1')
+    dest = container_name + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + '.png'
+    client.upload_file('/tmp/data.png', container_name + '-bucket', dest)
+    return {'result': 'success'}
+
 
 
 # assembly all the functions
@@ -417,5 +405,9 @@ def proceed(keywords=None, file_dest="data",
         save_json(response)
 
 
-if __name__ == '__main__':
-     proceed()
+# lambda service handler
+def sunrise_api_collector(event, context):
+    proceed()
+    return {"result": "success"}
+
+

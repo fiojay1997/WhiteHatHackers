@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "cs3505-sunrise-api"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1unte9kjh5mj0"
+s3_prefix = "cs3505-sunrise-api"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"

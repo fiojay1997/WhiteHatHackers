@@ -50,7 +50,7 @@ private:
 
 	cairo_surface_t* cairo_surface;
 
-    auto mylogger = spdlog::basic_logger_mt("mylogger", "encode_video_logs.txt");
+    std::shared_ptr<spdlog::logger>  mylogger = spdlog::basic_logger_mt("mylogger", "encode_video_logs.txt");
 
 public:
 
@@ -207,11 +207,10 @@ public:
 
         if (yuvpic == NULL)
         {
-	        mylogger->error("load yuv frame failed");
+	    mylogger->error("load yuv frame failed");
             ///cout << "load yuv frame failed" << endl;
             exit(1);
         }
-d
         yuvpic->format = AV_PIX_FMT_YUVJ420P;
         yuvpic->width = width;
         yuvpic->height = height;

@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sunrise
+
+  Sample SAM Template for sunrise
+
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.sunrise_api_collector
+      Runtime: python3.8
+      Events:
+        sunrise:
+            Type: Schedule
+            Properties: 
+              Schedule: 'rate(4 minutes)'
+
+  SunriseAPI:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: sunrise-bucket

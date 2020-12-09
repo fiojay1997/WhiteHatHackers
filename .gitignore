@@ -40,3 +40,7 @@
 # python
 python/__pycache__/
 python/resources/
+
+# resources
+/res
+res

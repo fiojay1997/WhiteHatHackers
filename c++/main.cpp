@@ -5,7 +5,7 @@
  * 
  **/
 
-#include "video.cpp"
+#include "encode_video.cpp"
 #include <vector>
 
 using namespace std;
@@ -16,15 +16,16 @@ using namespace std;
  **/
 int main()
 {
+
     //set variables for final movie output
     const int width = 1080;
     const int height = 900;
     const int nframes = 100;
 
     //initialize video
-    video movie("svg_image", width, height);
+    video movie("output", width, height);
 
-    //for each frame of movie
+    for each frame of movie
     for (int iframe = 0; iframe < nframes; iframe++)
     {
       //add frame
