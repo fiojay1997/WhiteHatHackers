@@ -1,153 +1,256 @@
 #include <iostream>
-#include <fstream>
+#include <stdint.h>
+#include <string>
 #include <vector>
-#include <ctime>
-#include <chrono>
+#include <cairo.h>
 
 extern "C"
 {
-#include <string>
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libswscale/swscale.h>
-#include <libavutil/imgutils.h>
+	#include <libswscale/swscale.h>
+	#include <libavcodec/avcodec.h>
+	#include <libavutil/mathematics.h>
+	#include <libavformat/avformat.h>
+	#include <libavutil/opt.h>
 }
 
-/*
- * Generate AVFrame from pictures
- */
-AVFrame * open_file(const char * filename) 
+using namespace std;
+
+class video
 {
-    AVFormatContext * format_ctx = NULL;
-    int error_code;
-    error_code = avformat_open_input(&format_ctx, filename, NULL, NULL);
-    if (error_code != 0)
+private:
+    const unsigned int width, height;
+	unsigned int iframe;
+
+	SwsContext* swsCtx;
+	AVOutputFormat* fmt;
+	AVStream* stream;
+	AVFormatContext* fc;
+	AVCodecContext* c;
+	AVPacket pkt;
+
+	AVFrame *rgbpic, *yuvpic;
+
+	vector<uint8_t> pixels;
+
+	cairo_surface_t* cairo_surface;
+
+public:
+    video(const string & filename_, const unsigned int width_, const unsigned int height_) 
+            : width(width_), height(height_), iframe(0), pixels(4 * width * height)
     {
-    	std::cout << "Could not open " << filename << "." << std::endl;
-	return NULL;
+        cairo_surface = cairo_image_surface_create_for_data(
+		    (unsigned char*) &pixels[0], CAIRO_FORMAT_RGB24, width, height,
+		    cairo_format_stride_for_width(CAIRO_FORMAT_RGB24, width));
+        
+        if (cairo_surface == NULL)
+        {
+            cout << "load cario_surface failed" << endl;
+            exit(1);
+        }
+
+        swsCtx = sws_getContext(width, height,
+            AV_PIX_FMT_RGB24, width, height, AV_PIX_FMT_YUVJ420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+        
+        if (swsCtx == NULL)
+        {
+            cout << "load sws context failed" << endl;
+            exit(1);
+        }
+
+        const char* fmtext = "mp4";
+        const string filename = filename_ + "." + fmtext;
+        fmt = av_guess_format(fmtext, NULL, NULL);
+
+        if (fmt == NULL)
+        {
+            cout << "load format failed" << endl;
+            exit(1);
+        }
+
+        avformat_alloc_output_context2(&fc, NULL, NULL, filename.c_str());
+        
+        if (fc == NULL)
+        {
+            cout << "load format conetxt failed" << endl;
+            exit(1);
+        }
+
+        AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+
+        if (codec == NULL)
+        {
+            cout << "load encoder failed" << endl;
+            exit(1);
+        }
+
+        AVDictionary* opt = NULL;
+        av_dict_set(&opt, "preset", "slow", 0);
+        av_dict_set(&opt, "crf", "20", 0);
+        stream = avformat_new_stream(fc, codec);
+
+        if (stream == NULL)
+        {
+            cout << "load stream failed" << endl;
+            exit(1);
+        }
+
+        c = stream->codec;
+
+        if (c == NULL)
+        {
+            cout << "load stream encoder failed" << endl;
+            exit(1);
+        }
+        c->width = width;
+        c->height = height;
+        c->pix_fmt = AV_PIX_FMT_YUVJ420P;
+        c->time_base = (AVRational){ 1, 25 };
+
+        if (fc->oformat->flags & AVFMT_GLOBALHEADER)
+            c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        
+        int error_code;
+        error_code = avcodec_open2(c, codec, &opt);
+        if (error_code != 0)
+        {
+            cout << "avcodec_open failed" << endl;
+            exit(1);
+        }
+
+       //  av_dict_free(&opt);
+        
+        stream->time_base = (AVRational){ 1, 25 };
+       
+        error_code = avio_open(&fc->pb, filename.c_str(), AVIO_FLAG_WRITE);
+        if (error_code != 0)
+        {
+            cout << "avio_open failed" << endl;
+            exit(1);
+        }
+
+        int ret = avformat_write_header(fc, &opt);
+
+        if (ret != 0)
+        {
+            cout << "avformat write header failed" << endl;
+            exit(1);
+        }
+
+
+
+        rgbpic = av_frame_alloc();
+
+        if (rgbpic == NULL)
+        {
+            cout << "load rgb frame failed" << endl;
+            exit(1);
+        }
+
+        rgbpic->format = AV_PIX_FMT_RGB24;
+        rgbpic->width = width;
+        rgbpic->height = height;
+        ret = av_frame_get_buffer(rgbpic, 1);
+
+        yuvpic = av_frame_alloc();
+
+        if (yuvpic == NULL)
+        {
+            cout << "load yuv frame failed" << endl;
+            exit(1);
+        }
+
+        yuvpic->format = AV_PIX_FMT_YUVJ420P;
+        yuvpic->width = width;
+        yuvpic->height = height;
+        ret = av_frame_get_buffer(yuvpic, 1);
     }
-    
-    error_code = avformat_find_stream_info(format_ctx, NULL);
-    if (error_code != 0)
+
+    void addFrame(const string & filename)
     {
-        std::cout << "Could not find stream info" << std::endl;
-	return NULL;
+        cairo_surface_t* img = cairo_image_surface_create_from_png(filename.c_str());
+
+		int imgw = cairo_image_surface_get_width(img);
+		int imgh = cairo_image_surface_get_height(img);
+
+		cairo_t* cr = cairo_create(cairo_surface);
+		cairo_scale(cr, (float)width / imgw, (float)height / imgh);
+		cairo_set_source_surface(cr, img, 0, 0);
+		cairo_paint(cr);
+		cairo_destroy(cr);
+		cairo_surface_destroy(img);
+
+		unsigned char* data = cairo_image_surface_get_data(cairo_surface);
+		
+		memcpy(&pixels[0], data, pixels.size());
+
+        addFrame((uint8_t*)&pixels[0]);
     }
-    AVCodec * codec = NULL;
-    codec = avcodec_find_decoder(format_ctx->streams[0]->codec->codec_id);
-    if (codec == NULL)
+
+        
+    void addFrame(const uint8_t* pixels)
     {
-    	std::cout << "Could not load decoder" << std::endl;
-	return NULL;
+
+        for (unsigned int y = 0; y < height; y++)
+        {
+            for (unsigned int x = 0; x < width; x++)
+            {
+                rgbpic->data[0][y * rgbpic->linesize[0] + 3 * x + 0] = pixels[y * 4 * width + 4 * x + 2];
+                rgbpic->data[0][y * rgbpic->linesize[0] + 3 * x + 1] = pixels[y * 4 * width + 4 * x + 1];
+                rgbpic->data[0][y * rgbpic->linesize[0] + 3 * x + 2] = pixels[y * 4 * width + 4 * x + 0];
+            }
+        }
+
+
+        sws_scale(swsCtx, rgbpic->data, rgbpic->linesize, 0,
+            height, yuvpic->data, yuvpic->linesize);
+
+        av_init_packet(&pkt);
+        pkt.data = NULL;
+        pkt.size = 0;
+
+        yuvpic->pts = iframe;
+
+        int got_output;
+        int ret = avcodec_encode_video2(c, &pkt, yuvpic, &got_output);
+        if (got_output)
+        {
+            fflush(stdout);
+            av_packet_rescale_ts(&pkt, (AVRational){ 1, 25 }, stream->time_base);
+
+            pkt.stream_index = stream->index;
+            printf("Writing frame %d (size = %d)\n", iframe++, pkt.size);
+
+            av_interleaved_write_frame(fc, &pkt);
+            av_packet_unref(&pkt);
+        }
     }
 
-    AVCodecContext * codec_ctx = format_ctx->streams[0]->codec;
-    error_code = avcodec_open2(codec_ctx, codec, NULL);
-    if (error_code != 0)
+    ~video()
     {
-    	std::cout << "Could not load codec for this file" << std::endl;
+        for (int got_output = 1; got_output; )
+        {
+            int ret = avcodec_encode_video2(c, &pkt, NULL, &got_output);
+            if (got_output)
+            {
+                fflush(stdout);
+                av_packet_rescale_ts(&pkt, (AVRational){ 1, 25 }, stream->time_base);
+                pkt.stream_index = stream->index;
+                av_interleaved_write_frame(fc, &pkt);
+                av_packet_unref(&pkt);
+            }
+        }
+        
+        av_write_trailer(fc);
+
+        if (!(fmt->flags & AVFMT_NOFILE))
+            avio_closep(&fc->pb);
+        avcodec_close(stream->codec);
+
+        sws_freeContext(swsCtx);
+        av_frame_free(&rgbpic);
+        av_frame_free(&yuvpic);
+        avformat_free_context(fc);
+
+        cairo_surface_destroy(cairo_surface);
     }
-    
-    AVFrame * frame;
-    AVPacket packet;
-
-    frame = av_frame_alloc();
-    av_read_frame(format_ctx, &packet);
-    
-    int finished;
-    avcodec_decode_video2(codec_ctx, frame, &finished, &packet);
-    std::cout << finished << std::endl;
-
-    AVFrame * rgbFrame = av_frame_alloc();
-    rgbFrame->width = frame->width;
-    rgbFrame->height = frame->height;
-    rgbFrame->format = AV_PIX_FMT_YUV420P; 
-    int numBytes = avpicture_get_size(AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
-    uint8_t * buffer = (uint8_t*) av_malloc(numBytes);
-    avpicture_fill((AVPicture*) rgbFrame, buffer, AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
-    
-    struct SwsContext *sws_ctx;
-    sws_ctx = sws_getContext(frame->width, frame->height, (AVPixelFormat) frame->format, frame->width,
-		    frame->height, AV_PIX_FMT_YUV420P, SWS_BILINEAR, NULL, NULL, NULL); 
-    sws_scale(sws_ctx, frame->data, frame->linesize, 0, codec_ctx->height, 
-		    rgbFrame->data, rgbFrame->linesize);
-    
-    return rgbFrame;
-}
-
-/**
- * Generate output file name
- * The name should conatin the current time
- * The file type is mp4
- */
-const char * get_filename()
-{
-    const char * v_fmt = "mp4";
-    std::string filename;
-    auto time_now = std::chrono::system_clock::now();
-    std::time_t current_time = std::chrono::system_clock::to_time_t(time_now);
-    std::string current_time_s(std::ctime(&current_time));
-    filename = current_time_s + ".mp4";
-    return filename.c_str();
-}
-
-int main()
-{
-    AVFrame * frame = open_file("../pictures/2.jpeg");
-    AVFrame * frame2 = open_file("../pictures/3.jpeg");
-    AVFrame * frame3 = open_file("../pictures/3.jpeg");
-
-    if (frame == NULL || frame2 == NULL || frame3 == NULL)
-    {
-    	std::cout << "Generate failed" << std::endl;
-	return -1;
-    }
-
-    AVCodec * video_codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
-    if (video_codec == NULL)
-    {
-        std::cout << "Failed to load encoder" << std::endl;
-        return -1;
-    }
-
-    AVCodecContext * video_ctx = avcodec_alloc_context3(video_codec);
-    if (video_ctx == NULL)
-    {
-        std::cout << "Failed to load encoder context" << std::endl;
-        return -1;
-    }
-
-    video_ctx->bit_rate = 4000000;
-    video_ctx->width = frame->width;
-    video_ctx->height = frame->height;
-    video_ctx->time_base = (AVRational) {1, 25};
-    video_ctx->pix_fmt = AV_PIX_FMT_YUVJ420P;
-
-    if (avcodec_open2(video_ctx, video_codec, NULL) < 0)
-    {
-        std::cout << "Failed to open encoder" << std::endl;
-        return -1;
-    }
-
-    AVPacket packet;
-    av_init_packet(&packet);
-    packet.data = NULL;
-    packet.size = 0;
-    int got_packet_ptr;
-    int error_code = avcodec_encode_video2(video_ctx, &packet, frame, &got_packet_ptr);
-    if (error_code < 0)
-    {
-        std::cout << "Failed to encode video" << std::endl;
-	return -1;
-    }
-    
-    if (got_packet_ptr)
-    {
-        std::cout << "load succeed" << std::endl;
-	std::ofstream out_file("demo3.mp4");
-	out_file.write((const char *) packet.data, packet.size);
-	out_file.close();
-	return 0;
-    }
-}
-
+};
