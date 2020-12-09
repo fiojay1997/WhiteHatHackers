@@ -14,7 +14,7 @@ using namespace std;
  * Main starting point of program
  * Final Video product svg_image.mp4
  **/
-int main(int argc, char *argv[])
+int main()
 {
     //set variables for final movie output
     const int width = 1080;
@@ -27,8 +27,9 @@ int main(int argc, char *argv[])
     //for each frame of movie
     for (int iframe = 0; iframe < nframes; iframe++)
     {
-        //add frame
-        movie.addFrame(argv[1]);
+      //add frame
+      movie.addFrame("output.png");
     }
+
     
 }
