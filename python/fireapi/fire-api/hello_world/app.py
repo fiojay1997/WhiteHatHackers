@@ -67,7 +67,7 @@ def request(url, params=None):
             return {"Error": "Request failed without parameters"}
     else:
         try:
-            rep = rq.get(url, params)
+            rep = rq.get(url, headers=params)
         except:
             return {"Error": "Request failed with parameters"}
     if rep.status_code == 200:
@@ -264,7 +264,6 @@ def insert_data(data_map):
         connection.commit()
     finally:
         connection.close()
-   
 
 # save the data as text file
 # the text file should always be in the same format 
@@ -297,9 +296,12 @@ def generate_img(data1, data2, data3):
     x = np.arange(len(names))
 
     w = 0.3
-    plt.bar(x - w, df[data1].values, width = w, label = data1)
-    plt.bar(x, df[data2].values, width = w, label = data2)
-    plt.bar(x + w, df[data3].values, width = w, label = data3)
+    if data1 is not None and data2 is not None and data3 is not None:
+        plt.bar(x - w, df[data1].values, width = w, label = data1)
+        plt.bar(x, df[data2].values, width = w, label = data2)
+        plt.bar(x + w, df[data3].values, width = w, label = data3)
+    else:
+        plt.bar(x, df[data1].values, width = w, label = data1)
 
     plt.xticks(x, names)
     plt.ylim([0, 3])
@@ -337,7 +339,7 @@ def store_img_to_s3(container_name):
 # browser_info      : string (the browser used for simulating the action)
 # config_dest       : string (location stores the config file)
 def proceed(keywords=None, file_dest="data",
-            resources_dest="resource", browser_info=None, config_dest="sunrise_config.json"):
+            resources_dest="resource", browser_info=None, config_dest="fire_config.json"):
     if keywords is None:
         keywords = []
     config = read_config(config_dest)
@@ -364,7 +366,11 @@ def proceed(keywords=None, file_dest="data",
             print("Download failed")
     # TODO: set up backlogging for data downloading
     # TODO: downloading should not only support json
-    response = request(api, params)
+    temp = {}
+    for k, v in params.items():
+        if k != "selected":
+            temp[k] = v
+    response = request(api, temp)
 
     # TODO: this needs to be fixed
     if "selected" in config:
@@ -377,7 +383,9 @@ def proceed(keywords=None, file_dest="data",
                     for k in selected[0]:
                         return_info[k] = response[k]
                 else:
-                    return_info[key] = response[key]
+                    return_info['grass_pollen'] = response['data'][0]['Count']['grass_pollen']
+                    return_info['tree_pollen'] = response['data'][0]['Count']['tree_pollen']
+                    return_info['weed_pollen'] = response['data'][0]['Count']['weed_pollen']
 
         # add db operations
         nested_info = {}
@@ -388,7 +396,7 @@ def proceed(keywords=None, file_dest="data",
             else:
                 nested_info[key] = return_info[key]
         # insert to database
-        insert_data(nested_info)
+        # insert_data(nested_info)
         # save the data as txt file
         save_text_file(nested_info) 
         # convert it to csv
@@ -397,10 +405,27 @@ def proceed(keywords=None, file_dest="data",
         if (config_dest == "sunrise_config.json"):
             generate_img("sunrise", "sunset", "day_length")
             store_img_to_s3("sunrise-cs3505")
+
         if (config_dest == "weather_config.json"):
-            generate_img("temp", "humidity", "temp")
-            store_img_to_s3("weather")
-        # there would be more 
+            generate_img("temp", "humidity", None)
+            store_img_to_s3("weather-cs3505")
+
+        if (config_dest == "air_config.json"):
+            generate_img("AQI", "PM10", "PM25")
+            store_img_to_s3("air-quality-cs3505")
+
+        if (config_dest == "fire_config.json"):
+            generate_img("grass_pollen", "tree_pollen", "weed_pollen")
+            store_img_to_s3("fire-cs3505")
+
+        if (config_dest == "soil_config.json"):
+            generate_img("soil_temperature", "soil_moisture", "scantime")
+            store_img_to_s3("soil-cs3505")
+
+        if (config_dest == "water_config.json"):
+            generate_img("water_vapor", None, None)
+            store_img_to_s3("water-cs3505")
+ 
     else:
         save_json(response)
 
@@ -409,5 +434,3 @@ def proceed(keywords=None, file_dest="data",
 def sunrise_api_collector(event, context):
     proceed()
     return {"result": "success"}
-
-

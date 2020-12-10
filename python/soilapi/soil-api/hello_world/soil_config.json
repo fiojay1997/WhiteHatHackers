@@ -1,0 +1,6 @@
+{
+  "api": "http://api.ambeedata.com/soil/latest/by-lat-lng?lat=12.9889055&lng=77.574044",
+  "x-api-key": "vxBlY7DGV91Rty5wNk6dADJ9Y7gphGd2Whdz8csj", 
+  "Content-type": "application/json",
+  "selected": ["data"]
+}

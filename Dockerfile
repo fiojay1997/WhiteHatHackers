@@ -46,4 +46,4 @@ RUN ./configure --prefix=/ --enable-gpl --enable-libx264
 RUN make 
 RUN make install
 RUN pip3 install Pillow ; pip3 install awscli
-RUN cd ~
+RUN python3 download_img.py

@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  sunrise
+  Soil
 
-  Sample SAM Template for sunrise
+  Sample SAM Template for Soil
 
 Globals:
   Function:
@@ -25,4 +25,4 @@ Resources:
   SunriseAPI:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: sunrise-cs3505-bucket
+      BucketName: soil-cs3505-bucket

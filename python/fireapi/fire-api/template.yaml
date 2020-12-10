@@ -1,13 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  sunrise
+  fire
 
-  Sample SAM Template for sunrise
+  Sample SAM Template for fire 
 
 Globals:
   Function:
-    Timeout: 30
+    Timeout: 60
 
 Resources:
   HelloWorldFunction:
@@ -25,4 +25,4 @@ Resources:
   SunriseAPI:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: sunrise-cs3505-bucket
+      BucketName: fire-cs3505-bucket

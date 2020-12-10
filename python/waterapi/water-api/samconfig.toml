@@ -2,9 +2,9 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "sunrise-cs3505-api"
+stack_name = "water-cs3505-api"
 s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1unte9kjh5mj0"
-s3_prefix = "sunrise-cs3505-api"
+s3_prefix = "water-cs3505-api"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"

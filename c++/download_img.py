@@ -22,8 +22,8 @@ def stitch_img():
     # create the directory for storing the stitched images
     if not os.path.exists('stitched_img'):
         os.makedirs('stitched_img')
-    sunrise_imgs = get_files('../res/sunrise')
-    weather_imgs = get_files('../res/weather')
+    sunrise_imgs = get_files('./stitched_img')
+    weather_imgs = get_files('./stitched_img')
     min_length = min(len(sunrise_imgs), len(weather_imgs))
     for i in range(0, min_length):
         imgs_str = '"../res/sunrise/' +str(sunrise_imgs[i]) + '"' + ' "../res/weather/' + str(weather_imgs[i]) + '" '
@@ -33,8 +33,8 @@ def stitch_img():
 
 
 def concat_img():
-    files = get_files("8")
-    os.chdir('8')
+    files = get_files("./stitched_img")
+    os.chdir('stitched_img')
     images = [Image.open(x) for x in files]
     widths, heights = zip(*(i.size for i in images))
 
@@ -48,21 +48,21 @@ def concat_img():
         new_im.paste(im, (x_offset,0))
         x_offset += im.size[0]
 
-    new_im.save('test.png')
+    new_im.save(files + 'concated.png')
 
 
 def resize_img():
-    files = get_files("../res")
+    files = get_files("./stitched_img")
     basewidth = 900
     baseheight = 900
 
     i = 0
     for f in files:
-        img = Image.open('../res/' +f)
+        img = Image.open('./stitched_img' +f)
         img = img.resize((basewidth,baseheight), Image.ANTIALIAS)
         f = str(i)
         i += 1
-        img.save('../res/' + f + '.png') 
+        img.save('./stitched_img' + f + '.png') 
 
 
 if __name__ == "__main__":
