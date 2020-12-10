@@ -4,11 +4,15 @@ from PIL import Image
 
 
 def get_img():
-    if not os.path.exists('../res'):
-        os.makedirs('../res')
-    os.system("aws s3 sync s3://weather-cs3505-bucket ../res")
-    os.system("aws s3 sync s3://sunrise-bucket ../res")
-    return get_files('../res')
+    if not os.path.exists('./res'):
+        os.makedirs('./res')
+    os.system("aws s3 sync s3://air-quality-cs3505-bucket ./res")
+    os.system("aws s3 sync s3://fire-cs3505-bucket ./res")
+    os.system("aws s3 sync s3://soil-cs3505-bucket ./res")
+    os.system("aws s3 sync s3://sunrise-cs3505-bucket ./res")
+    os.system("aws s3 sync s3://water-cs3505-bucket ./res")
+    os.system("aws s3 sync s3://weather-cs3505-bucket ./res")
+    return get_files('./res')
     
 
 def get_files(path):
@@ -20,10 +24,10 @@ def get_files(path):
 
 def stitch_img():
     # create the directory for storing the stitched images
-    if not os.path.exists('stitched_img'):
-        os.makedirs('stitched_img')
-    sunrise_imgs = get_files('./stitched_img')
-    weather_imgs = get_files('./stitched_img')
+    if not os.path.exists('./res'):
+        os.makedirs('./res')
+    sunrise_imgs = get_files('./re')
+    weather_imgs = get_files('./res')
     min_length = min(len(sunrise_imgs), len(weather_imgs))
     for i in range(0, min_length):
         imgs_str = '"../res/sunrise/' +str(sunrise_imgs[i]) + '"' + ' "../res/weather/' + str(weather_imgs[i]) + '" '
@@ -33,8 +37,8 @@ def stitch_img():
 
 
 def concat_img():
-    files = get_files("./stitched_img")
-    os.chdir('stitched_img')
+    files = get_files("./res")
+    os.chdir('res')
     images = [Image.open(x) for x in files]
     widths, heights = zip(*(i.size for i in images))
 
@@ -52,18 +56,20 @@ def concat_img():
 
 
 def resize_img():
-    files = get_files("./stitched_img")
+    files = get_files("./res")
     basewidth = 900
     baseheight = 900
-
+    if not os.path.exists('./resized'):
+        os.makedirs('./resized')
     i = 0
     for f in files:
-        img = Image.open('./stitched_img' +f)
+        img = Image.open('./res/' +f)
         img = img.resize((basewidth,baseheight), Image.ANTIALIAS)
         f = str(i)
         i += 1
-        img.save('./stitched_img' + f + '.png') 
+        img.save('./resized/' + f + '.png') 
 
 
 if __name__ == "__main__":
+    get_img()
     resize_img()
