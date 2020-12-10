@@ -43,13 +43,10 @@ private:
 	AVFormatContext* fc;
 	AVCodecContext* c;
 	AVPacket pkt;
-
 	AVFrame *rgbpic, *yuvpic;
-
+    
 	vector<uint8_t> pixels;
-
 	cairo_surface_t* cairo_surface;
-
     std::shared_ptr<spdlog::logger>  mylogger = spdlog::basic_logger_mt("mylogger", "encode_video_logs.txt");
 
 public:
@@ -147,7 +144,7 @@ public:
         c->width = width;
         c->height = height;
         c->pix_fmt = AV_PIX_FMT_YUVJ420P;
-        c->time_base = (AVRational){ 1, 25 };
+        c->time_base = (AVRational){ 1, 2 };
 
         if (fc->oformat->flags & AVFMT_GLOBALHEADER)
             c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -166,7 +163,7 @@ public:
        //  av_dict_free(&opt);
         
         //set fps
-        stream->time_base = (AVRational){ 1, 25 };
+        stream->time_base = (AVRational){ 1, 2 };
        
         //open file with output context
         error_code = avio_open(&fc->pb, filename.c_str(), AVIO_FLAG_WRITE);
@@ -283,7 +280,7 @@ public:
         if (got_output)
         {
             fflush(stdout);
-            av_packet_rescale_ts(&pkt, (AVRational){ 1, 25 }, stream->time_base);
+            av_packet_rescale_ts(&pkt, (AVRational){ 1, 2 }, stream->time_base);
 
             pkt.stream_index = stream->index;
             printf("Writing frame %d (size = %d)\n", iframe++, pkt.size);
@@ -306,7 +303,7 @@ public:
             if (got_output)
             {
                 fflush(stdout);
-                av_packet_rescale_ts(&pkt, (AVRational){ 1, 25 }, stream->time_base);
+                av_packet_rescale_ts(&pkt, (AVRational){ 1, 2 }, stream->time_base);
                 pkt.stream_index = stream->index;
                 av_interleaved_write_frame(fc, &pkt);
                 av_packet_unref(&pkt);
